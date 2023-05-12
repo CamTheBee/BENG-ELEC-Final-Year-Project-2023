@@ -1,0 +1,9 @@
+{
+    "target_overrides": {
+        "NUCLEO_F401RE": {
+            "target.printf_lib": "std",
+            "target.components_add": ["SD"]
+        }
+        
+    }
+}
