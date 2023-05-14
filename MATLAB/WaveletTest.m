@@ -6,7 +6,7 @@ close all;
 % a[3,2] = fscanf(fileid,format);
 total = 1000;
 
-fid = fopen('C:\Users\camer\Desktop\glucoseresults.txt', 'r');
+fid = fopen('D:\glucoseresults.txt', 'r');
     if fid == -1
         disp('Error, check file name')
     else
@@ -14,7 +14,7 @@ fid = fopen('C:\Users\camer\Desktop\glucoseresults.txt', 'r');
     end
     fclose(fid);
 
-AC = (3.3/4096)*(S{2}/16);
+AC = (3.3/4096)*(S{1}/16);
 test = AC(1:1000);
 
 %Wavelet

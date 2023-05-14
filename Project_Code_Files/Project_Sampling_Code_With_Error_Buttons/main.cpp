@@ -182,11 +182,11 @@ int main ()
 {
     //Introdcution Information for user printed to the terminal
     printf("Welcome to Blood Glucose Sampling using PPG signals!\n");
-    printf("WARNING: The data produced can only be saved via a connected SD Card.");
-    printf(" Therefore, if an SD Card is not connected, this program will not run!\n");
-    printf("The file 'glucoseResults' on the SD Card will be wiped before sampling begins.");
+    printf("WARNING: The data produced can only be saved via a connected micro-SD Card.");
+    printf(" Therefore, if an micro-SD Card is not connected, this program will not run!\n");
+    printf("The file 'glucoseResults' on the micro-SD Card will be wiped before sampling begins.");
     printf(" Due to this, please ensure any wanted data is backed up before continuing\n");
-    printf("Once an SD Card has been connected, please press the blue button to continue.\n");
+    printf("Once an micro-SD Card has been connected, please press the blue button to continue.\n");
     
     userButton.waitForPress(); //Uses button class to wait for button input
     ThisThread::sleep_for(50ms); //Thread sent to sleep to prevent switch bounce
@@ -194,13 +194,13 @@ int main ()
     //Checks if SD Card is connected. Memory wipes if it is connected. Returns an init error and system resets if not
     if ((sdDetection = sd.init())==0) {
         //SD Card has been initialised so memory wipe can begin
-        printf("SD Card Detected! Memory wipe in progress...\n"); //Alerts user about SD Card and memory wipe
+        printf("Micro-SD Card Detected! Memory wipe in progress...\n"); //Alerts user about SD Card and memory wipe
         sdMemoryReset(); //Calls memory wipe function
     }
     else {
         //Alerts user of missing SD Card error
-        printf("SD Init failed: system reset in 5 seconds\n");
-        printf("Please insert an SD Card to begin once system has restarted\n");
+        printf("\nMicro-SD Init failed: system reset in 5 seconds\n");
+        printf("Please insert an Micro-SD Card to begin once system has restarted\n\n");
 
         //Configures LEDs to inform user of missing SD card
         iLED = 0;
@@ -303,13 +303,13 @@ void errorHandler (int errorCode) {
             error("CRITCAL ERROR: CRC data corruption error\n");
             break;
         case 7:
-            error("CRITCAL ERROR: SD Card failed to Initialise\n");
+            error("CRITCAL ERROR: Micro-SD Card failed to Initialise\n");
             break;
         case 8:
             error("CRITCAL ERROR: Could not open file for write\n");
             break;
         case 9:
-            error("CRITCAL ERROR: Writing to SD Card has resulted in a deadlock\n");
+            error("CRITCAL ERROR: Writing to micro-SD Card has resulted in a deadlock\n");
             break;
         default: 
             error("CRITICAL ERROR: Unkown Error\n");
@@ -778,7 +778,7 @@ int writeSDCard(pdData sendData[bufferSize]) {
         errorQueue.call(errorHandler,6);
     }
 
-    printQueue.call(printf, "Initialing SD Card - Do not remove the SD Card!\n"); //Informs user that SD Card initialsing occuring
+    printQueue.call(printf, "Checking micro-SD Card - Do not remove the micro-SD Card!\n"); //Informs user that SD Card initialsing occuring
     
     //Error checking the SD card initialsation - If failed, error handler is called
     if (int err = sd.init()==!0) {
@@ -788,7 +788,7 @@ int writeSDCard(pdData sendData[bufferSize]) {
     
     FATFileSystem fs("sd", &sd); //Creats an instance allowing SD Card writting
 
-    printQueue.call(printf, "SD initialisation succeded, writing to sd...\n"); //Alerts user of SD Card initialisation success
+    printQueue.call(printf, "micro-SD check successful, writing to micro-sd...\n"); //Alerts user of SD Card initialisation success
 
     FILE *fp = fopen("/sd/glucoseresults.txt","a+"); //Set format and attempt to open file in append mode
  
@@ -821,8 +821,8 @@ int writeSDCard(pdData sendData[bufferSize]) {
         fclose(fp); 
 
         //Alerts the user that the SD Card write has finished and the current data set has been saved to the SD Card
-        printQueue.call(printf, "SD Write done...\n");
-        printQueue.call(printf, "Data set %i saved to the SD card!\n\n", sampleFlag);
+        printQueue.call(printf, "micro-SD Write done...\n");
+        printQueue.call(printf, "Data set %i saved to the micro-SD card!\n\n", sampleFlag);
 
         //SD Card deinitialised
         sd.deinit();
@@ -840,7 +840,7 @@ int writeSDCard(pdData sendData[bufferSize]) {
 
             //Alerts user of sampling being complete and the program is about to restart
             printQueue.call(printf,"Sampling Complete!\n");
-            printQueue.call(printf,"Please remove the SD card to review sampled data. The file is called 'glucoseresults'.\n");
+            printQueue.call(printf,"Please remove the micro-SD card to review sampled data. The file is called 'glucoseresults'.\n");
             printQueue.call(printf,"System Restarting in 5 seconds!\n\n");
 
             //Backup reset of 5 seconds incase WatchDog Timer Fails
