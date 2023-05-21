@@ -18,6 +18,7 @@ using namespace std;
 Author:
 Cameron Stephens
 Description:
+- Written for the NUCLEO-F401RE - To run on other boards, mbed_app.json needs changing.
 - This is the main file for the Blood Glucose measuring via PPG signals.
 - Most functions are contained in this main file rather than separate .hpp and .cpp files as the bulk of the code is sampling and writing to an SD Card.
 - RTOS is used for accurate sampling via threads and a MailBox.

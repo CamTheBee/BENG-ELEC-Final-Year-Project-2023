@@ -18,6 +18,7 @@ using namespace std;
 Author:
 Cameron Stephens
 Description:
+- Written for the NUCLEO-F401RE - To run on other boards, mbed_app.json needs changing.
 - This code is the same as the Project_Sampling_Code_With_Error_Buttons but missing the force error buttons so the code can be ran safety without the extra buttons.
 - This is the main file for the Blood Glucose measuring via PPG signals.
 - Most functions are contained in this main file rather than separate .hpp and .cpp files as the bulk of the code is sampling and writing to an SD Card.
