@@ -1,3 +1,6 @@
+
+//Demo Code for the showcase
+
 #include "mbed.h"
 
 DigitalOut pwmControl(PA_8, 1);

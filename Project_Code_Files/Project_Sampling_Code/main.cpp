@@ -47,8 +47,9 @@ int sdDetection; //Int to validate SD Card
 int sampleFlag=1; //Int to count how many sample periods have occurred.
 int sampleStopFlag=1; //Int for user to input the amount of sample periods.
 
-const chrono::milliseconds sampleRate = 5ms; //Sets the sample rate for the programme - Minimum Tested value is 5ms = 500Hz!
-const int bufferSize = 10s/sampleRate;//Const Int for buffer size - Set by the dividing 10s over the sample rate - e.g. 10000/5=2000 samples for 10s
+const chrono::milliseconds sampleRate = 2ms; //Sets the sample rate for the programme 
+const chrono::seconds windowSize = 4s; //Sets the size of the sample window
+const int bufferSize = windowSize/sampleRate;//Const Int for buffer size - Set by the dividing 10s over the sample rate - e.g. 10000/5=2000 samples for 10s
 enum {buf = bufferSize}; //enum created to set the buffers to the bufferSize value
 
 //Buffers for storing Photodiode data.
@@ -62,7 +63,8 @@ const uint32_t TIMEOUT_MS = 5000; //Constant for watchdog timeout
 //GPIO Connections//
 PushSwitch userButton(PC_13); //Enables use of the blue user button on the Nucleo board using Nicholas Outram's PushSwitch Class.
 
-DigitalOut pwmControl(PA_8, 1); //Controls the pwm for the dual-rails
+PwmOut pwmControl(PA_8); //Controls the pwm for the dual-rails
+//DigitalOut pwmControl(PA_8, 1); //Controls the pwm for the dual-rails
 
 DigitalOut iLED(PA_0, 0); //Turns on the inferred LED for the SFH7060 package
 
@@ -112,7 +114,7 @@ Mutex sdLock; //Mutex Lock for writting to the SD Card
 
 //List of EventQueues
 EventQueue mainQueue; //EventQueue for main to prevent it from ending
-EventQueue pwmQueue; //PWM EventQueue - Allows for dual-supply on the Op-Amps
+//EventQueue pwmQueue; //PWM EventQueue - Allows for dual-supply on the Op-Amps
 EventQueue pdReadQueue; //EventQueue for the Photodiode Reading Thread
 EventQueue bufferQueue; //Buffer EventQueue - Used by the consumer Thread
 EventQueue sdWriteQueue; //EventQueue for SD Card writting
@@ -128,10 +130,11 @@ Thread prints; //Thread dedicated for printing to the terminal
 Thread errors; //Thread dedicated for handling errors that could occur
 
 //List of functions for threads - sets up the threads EventQueues
+/*
 void pwmTask () {
     pwmQueue.dispatch_forever();
 }
-
+*/
 void pdReadTask () {
     pdReadQueue.dispatch_forever();
 }
@@ -154,7 +157,7 @@ void errorTask () {
 
 
 //Initialsing Functions before main
-void pwmSwitch(); //Used to control the PWM for the dual-rail
+//void pwmSwitch(); //Used to control the PWM for the dual-rail
 void pdReading(); //Photodiode Reading Function
 void consumer(); //Buffering of Photodiode data Function
 int writeSDCard(pdData sendData[bufferSize]); //Function for writing to the SD Card
@@ -164,6 +167,11 @@ void errorHandler(int errorCode); //Error Handling Function
 
 int main () 
 {
+
+    //Sets up PWM for the charge pump before anything else
+    pwmControl.period_us(10);
+    pwmControl.pulsewidth_us(5);
+
     //Introdcution Information for user printed to the terminal
     printf("Welcome to Blood Glucose Sampling using PPG signals!\n");
     printf("WARNING: The data produced can only be saved via a connected micro-SD Card.");
@@ -198,9 +206,23 @@ int main ()
     
     //More user instructions to choose how many sample periods are required
     printf("A new test can begin.\n");
-    printf("How many 10 second samples are required? Please type the amount in the terminal and press the enter key.\n");
+    printf("How many window samples are required? Please type the amount in the terminal and press the enter key.\n");
     cin >> sampleStopFlag; //Used cin to red user input to the terminal.
-    printf("%i lots of 10 second samples have been choosen.\n", sampleStopFlag);
+
+    //Is called if zero is selected - calls an error
+    if (sampleStopFlag==0) {
+        printf("ERROR: Zero is not a possible choice!\n");
+        printf("System Reset in 5 seconds\n");
+        //Configures LEDs to inform user of missing SD card
+        iLED = 0;
+        grnLED = 0;
+        redLED = 1;
+        //Backup restart if WatchDog Timer fails
+        ThisThread::sleep_for(5s); //Waits 5 seconds before resetting
+        system_reset(); //Resets program
+    }
+
+    printf("%i lots of window samples have been choosen.\n", sampleStopFlag);
     printf("Please press the black reset button if this is incorrect!\n");
     printf("Or\n");
     //User final instruction to press the blue button to begin sampling
@@ -224,17 +246,21 @@ int main ()
     Watchdog &watchdog = Watchdog::get_instance();
     watchdog.start(TIMEOUT_MS);
 
+    /*
     pwm.start(pwmTask); //Starts pwm thread for dual-rail supply
-    pwm.set_priority(osPriorityRealtime); //Set pwm thread to highest priority as it is required to be active to enable for the circuit to work correctly
+    
+    */
+
+    pdRead.start(pdReadTask); 
+    pdRead.set_priority(osPriorityRealtime); //Set pdRead thread to highest priority to minimise jitter while sampling.
 
     //Reset of threads started with normal priority
-    pdRead.start(pdReadTask); 
     buffer.start(bufferTask);
     sdWrite.start(sdWriteTask);
     prints.start(printTask);
     errors.start(errorTask);
 
-    pwmQueue.call_every(1ms, callback(pwmSwitch)); //Calls the pwm thread every 1ms to ensure the pwm switches at a rate of 1kHz as designed for the circuitry 
+    //pwmQueue.call_every(1ms, callback(pwmSwitch)); //Calls the pwm thread every 1ms to ensure the pwm switches at a rate of 1kHz as designed for the circuitry 
     pdReadQueue.call_every(sampleRate, callback(pdReading)); //Calls the Photodiode reading thread every 10ms to ensure a sampling rate of 100Hz.
 
     mainQueue.dispatch_forever(); //Sets the main thread to dispatch forever so it sleeps until it is given a task
@@ -243,17 +269,18 @@ int main ()
 
 
 //PWM function - simply switches the current pwm value everytime the function is called - every 1ms.
+/*
 void pwmSwitch() {
     pwmControl=!pwmControl;
 }
-
+*/
 
 //Function responsible for handling critical errors and halting program execution when a critical error occurs. 
 //Critical errors are defined as any error which results in a hardware fault, deadlocks or loss of data.
 void errorHandler (int errorCode) {
 
     //Terminate running threads so watchdog will reset program 
-    pwm.terminate();
+    //pwm.terminate();
     buffer.terminate();
     pdRead.terminate();
     sdWrite.terminate();
@@ -667,7 +694,7 @@ int writeSDCard(pdData sendData[bufferSize]) {
         
         //Check to see if the the amount of samples choosen by the user has been reached. If yes, threads are terminated - ending the program.
         if (sampleFlag==sampleStopFlag) {
-            pwm.terminate();
+            //pwm.terminate();
             pdRead.terminate();
             buffer.terminate();
                 

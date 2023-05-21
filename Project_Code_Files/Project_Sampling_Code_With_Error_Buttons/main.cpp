@@ -55,13 +55,15 @@ int sdDetection; //Int to validate SD Card
 int sampleFlag=1; //Int to count how many sample periods have occurred.
 int sampleStopFlag=1; //Int for user to input the amount of sample periods.
 
-const chrono::milliseconds sampleRate = 5ms; //Sets the sample rate for the programme - Minimum Tested value is 5ms = 200Hz!
-const int bufferSize = 10s/sampleRate;//Const Int for buffer size - Set by the dividing 10s over the sample rate - e.g. 10000/5=2000 samples for 10s
+const chrono::milliseconds sampleRate = 5ms; //Sets the sample rate for the programme 
+const chrono::seconds windowSize = 10s; //Sets the size of the sample window
+const int bufferSize = windowSize/sampleRate;//Const Int for buffer size - Set by the dividing 10s over the sample rate - e.g. 10000/5=2000 samples for 10s
 enum {buf = bufferSize}; //enum created to set the buffers to the bufferSize value
 
 //Buffers for storing Photodiode data.
 pdData buffer_1[buf];
 pdData buffer_2[buf];
+
 
 Timer tmr1; //Timer
 const uint32_t TIMEOUT_MS = 5000; //Constant for watchdog timeout
@@ -181,8 +183,11 @@ void errorHandler(int errorCode); //Error Handling Function
 
 int main () 
 {
+    //Sets up PWM for the charge pump before anything else
     pwmControl.period_us(10);
     pwmControl.pulsewidth_us(5);
+
+
     //Introdcution Information for user printed to the terminal
     printf("Welcome to Blood Glucose Sampling using PPG signals!\n");
     printf("WARNING: The data produced can only be saved via a connected micro-SD Card.");
@@ -217,9 +222,10 @@ int main ()
     
     //More user instructions to choose how many sample periods are required
     printf("A new test can begin.\n");
-    printf("How many 10 second samples are required? Please type the amount in the terminal and press the enter key.\n");
+    printf("How many window samples are required? Please type the amount in the terminal and press the enter key.\n");
     cin >> sampleStopFlag; //Used cin to red user input to the terminal.
 
+    //Is called if zero is selected - calls an error
     if (sampleStopFlag==0) {
         printf("ERROR: Zero is not a possible choice!\n");
         printf("System Reset in 5 seconds\n");
@@ -232,7 +238,7 @@ int main ()
         system_reset(); //Resets program
     }
 
-    printf("%i lots of 10 second samples have been choosen.\n", sampleStopFlag);
+    printf("%i lots of window samples have been choosen.\n", sampleStopFlag);
     printf("Please press the black reset button if this is incorrect!\n");
     printf("Or\n");
     //User final instruction to press the blue button to begin sampling
